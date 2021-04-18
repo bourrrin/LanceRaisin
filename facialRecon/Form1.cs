@@ -55,16 +55,13 @@ namespace facialRecon
                 CvInvoke.EqualizeHist(grayImage, grayImage);
                 Rectangle[] faces = cascadeClassifier.DetectMultiScale(grayImage, 1.1, 3, Size.Empty, Size.Empty);
 
-                Size s = grayImage.Size;
-                facePos = new Point(s.Width / 2, s.Height / 2);
-
                 if (faces.Length > 0)
                 {
                     foreach(var face in faces)
                     {
                         CvInvoke.Rectangle(currentFrame, face, new Bgr(Color.Blue).MCvScalar, 2);
 
-                        Console.WriteLine(" FacePos: " + facePos.x + " "+ facePos.y);
+                        Console.WriteLine(" FacePos: " + grayImage.Size.Width/2 + " "+ grayImage.Size.Height / 2);
                         
                     }
                 }
