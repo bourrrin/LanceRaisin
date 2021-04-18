@@ -22,8 +22,10 @@ namespace facialRecon
 
         private Capture cap = null;
         private Image<Bgr, Byte> currentFrame = null;
-        Mat frame = new Mat();
-        public Point facePos;
+        private Mat frame = new Mat();
+        private int posx, posy, scale = 2;
+
+
         static SerialPort port;
 
         private bool facesDetectionEnable = false;
@@ -46,25 +48,41 @@ namespace facialRecon
         private void ProcessFrame(object sender, EventArgs e)
         {
             cap.Retrieve(frame, 0);
-            currentFrame = frame.ToImage<Bgr, Byte>().Resize(picCapture.Width, picCapture.Height,Inter.Cubic);
+            currentFrame = frame.ToImage<Bgr, Byte>().Resize(picCapture.Width, picCapture.Height,Inter.Cubic);//save frame to captured size
 
             if(facesDetectionEnable)
             {
                 Mat grayImage = new Mat();
-                CvInvoke.CvtColor(currentFrame, grayImage, ColorConversion.Bgr2Gray);
-                CvInvoke.EqualizeHist(grayImage, grayImage);
-                Rectangle[] faces = cascadeClassifier.DetectMultiScale(grayImage, 1.1, 3, Size.Empty, Size.Empty);
+                CvInvoke.CvtColor(currentFrame, grayImage, ColorConversion.Bgr2Gray); // set image to gray for better detection
+                CvInvoke.EqualizeHist(grayImage, grayImage); //brighter n more contrast
+                Rectangle[] faces = cascadeClassifier.DetectMultiScale(grayImage, scale, 3, Size.Empty, Size.Empty);//find face in image
 
                 if (faces.Length > 0)
                 {
-                    foreach(var face in faces)
-                    {
-                        CvInvoke.Rectangle(currentFrame, face, new Bgr(Color.Blue).MCvScalar, 2);
+                    // get x,y pos of the center of detected faces  
+                    posx = faces.ElementAt(0).Width / 2;
+                    posy = faces.ElementAt(0).Height / 2;
 
-                        Console.WriteLine(" FacePos: " + grayImage.Size.Width/2 + " "+ grayImage.Size.Height / 2);
-                        
+                    foreach (var face in faces)
+                    {
+                        CvInvoke.Rectangle(currentFrame, face, new Bgr(Color.Blue).MCvScalar, 2); //draw rectangle in window
+                    }
+
+                    if (repositionningEnable)
+                    {
+                        // setup communication w/ arduino
+                        port = new SerialPort();
+                        port.PortName = "COM4";
+                        port.BaudRate = 9600;
+                        port.Open();
+
+                        //send face pos to arduino
+                        port.Write("x" + posx);
+                        port.Write("y" + posy);
                     }
                 }
+
+                Console.WriteLine(" FacePos: " + posx + " " + posy);
             }
 
             picCapture.Image = currentFrame.Bitmap;
@@ -78,7 +96,6 @@ namespace facialRecon
         private void btnRepositionning_Click(object sender, EventArgs e)
         {
             repositionningEnable = true;
-
         }
     }
 }
